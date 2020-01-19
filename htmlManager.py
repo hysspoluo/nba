@@ -6,33 +6,36 @@ from selenium.webdriver.support.select import Select
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
 
 path = os.getcwd()
 folderName = path+"\\download" #下载文件的路径
+playoffgame = ["东部第一圈","西部第一圈","东部第二圈","西部第二圈","东部决赛","西部决赛","总决赛"]
 
+'''
+#数据下载
+'''
 
-
-def source2Html(Source,htmlName):
+def source2Html(Source,htmlName,season):
     # 目录不存在则创建目录
-    isExists = os.path.exists(folderName)
+    isExists = os.path.exists(folderName+"\\"+season)
     if not isExists:
-        os.makedirs(folderName)
+        os.makedirs(folderName+"\\"+season)
     fp = open(htmlName, "w", encoding='utf-8')
     fp.write(Source)
     fp.close()
 
-
-#季前赛
+#季前赛下载
 def downloadPreSeason(driver,season):
     try:
         driver.find_element_by_id("menu3").click()
     except:
         print("没有季前赛")
         return
-    htmlName = folderName+"\\"+season+"_"+"季前赛"
-    source2Html(driver.page_source,htmlName)
+    htmlName = folderName+"\\"+season+"\\"+"季前赛"
+    source2Html(driver.page_source,htmlName,season)
 
-#常规赛
+#常规赛下载
 def downloadregularSeason(driver,season):
     try:
         driver.find_element_by_id("menu1").click()
@@ -49,36 +52,26 @@ def downloadregularSeason(driver,season):
         driver.find_element_by_id("yearmonthTable2").find_elements_by_class_name("lsm2")[num].click()
         num += 1
         time.sleep(0.5)
-        htmlName = folderName + "\\"+season +"_常规赛_"+str(num)
-        source2Html(driver.page_source, htmlName)
+        htmlName = folderName+"\\"+season+"\\"+"_常规赛_"+str(num)
+        source2Html(driver.page_source, htmlName,season)
 
-#季后赛
+#季后赛下载
 def downloadPlayOff(driver,season):
     try:
         driver.find_element_by_id("menu2").click()
     except:
         print("没有季后赛")
         return
-
-    htmlName =  folderName+ "\\"+season+"_季后赛_总决赛"
-    source2Html(driver.page_source,htmlName)
-    time.sleep(1)
-
-    driver.find_element_by_class_name("cupmatch_rw2").click()
-    #test = driver.find_elements_by_class_name("cupmatch_rw2")
-    #playoffNum = len(driver.find_elements_by_class_name("cupmatch_rw2"))
-    """
-    num = 0
-    while 1:
-        if num == playoffNum:
-            break
-        driver.find_elements_by_class_name("cupmatch_rw2")[num].click()
-        num += 1
-        time.sleep(0.5)
-        name = driver.find_elements_by_class_name("cupmatch_rw2")[num].text
-        htmlName = folderName + "\\" + season + "_季后赛_" + name
-        source2Html(driver.page_source, htmlName)
-    """
+    for game in playoffgame:
+        str = "//*[text()='%s']" %(game)
+        try:
+            driver.find_element_by_xpath(str).click()
+            time.sleep(0.5)
+        except:
+            print("季后赛还没开始")
+            return
+        htmlName = folderName+"\\"+season+"\\"+"_季后赛_"+game
+        source2Html(driver.page_source,htmlName,season)
 
 
 def downloadNbaData(seasonLink):
@@ -109,10 +102,22 @@ def downloadNbaData(seasonLink):
                 time.sleep(1)
                 #开始进行数据分析
                 #分析季前赛
-                #downloadPreSeason(myDriver,item)
+                downloadPreSeason(myDriver,item)
                 #分析常规赛
-                #downloadregularSeason(myDriver,item)
-                #分析季后赛
-                downloadPlayOff(myDriver,item)
+                downloadregularSeason(myDriver,item)
+                # 分析季后赛
+                downloadPlayOff(myDriver, item)
 
     myDriver.quit()
+
+'''
+#数据分析
+'''
+def analysHtml(html):
+    soup = BeautifulSoup(open(html,"r",encoding='utf-8'),'html.parser')
+    table = soup.find("table", id="scheTab")
+    trs = table.find_all("tr")
+    trs_len = len(trs)
+    Schedule_List = []
+    for tr in trs:
+        print(tr.text)
