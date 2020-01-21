@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
+from openpyxl import load_workbook
 
 path = os.getcwd()
 folderName = path+"\\download" #下载文件的路径
@@ -115,14 +116,19 @@ def downloadNbaData(seasonLink):
 '''
 #数据分析
 '''
-def analysHtml(html):
-    soup = BeautifulSoup(open(html,"r",encoding='utf-8'),'html.parser')
+def analysHtml(htmlName):
+    soup = BeautifulSoup(open(htmlName,"r",encoding='utf-8'),'html.parser')
     table = soup.find("table", id="scheTab")
-    trs = table.find_all("tr")
-    trs_len = len(trs)
+    trs = table.find_all("tr",bgcolor = ["#E3EEF9","#ffffff"])#传递颜色参数list作为过滤条件
     Schedule_List = []
     for tr in trs:
-        print(tr.text)
+        gameList = []
+        for td in tr.find_all("td"):
+            gameList.append(td.text)
+        Schedule_List.append(gameList)
+    #返回每页的比赛列表
+    return Schedule_List
+
 
 def gethtmlpath():
     sheetNames = {}
@@ -143,17 +149,34 @@ def createxls(seasons):
             wb.create_sheet(season)
             sheet = wb.get_sheet_by_name(season)
             sheet.append(titles)
-
-
         wb.remove(wb.get_sheet_by_name("Sheet"))
-
-
-
         wb.save(path + "\\gameData.xlsx")
+'''
+def addgame2excel(sheetName,gamelist):
+    isExists = os.path.exists(path + "\\gameData.xlsx")
+    if not isExists:
+        print('文件丢失，停止')
+        return
+    #打开文件
+    wb = load_workbook(path + "\\gameData.xlsx")
+    wb.get_sheet_by_name(sheetName)
+'''
+
+
 
 
 def html2excel():
     sheetNames = gethtmlpath()
     createxls(sheetNames)
-
-    return
+    #开始导入数据
+    wb = load_workbook(path + "\\gameData.xlsx")#打开文件
+    for season in sheetNames:
+        seasonSheet = wb.get_sheet_by_name(season)#进入到指定赛季的表
+        seasonDir = folderName + "\\"+season
+        seasonGames = os.listdir(seasonDir)
+        for seasonGame in seasonGames:
+            filePath = seasonDir + "\\"+seasonGame
+            outputData = analysHtml(filePath)
+            for data in outputData:
+                seasonSheet.append(data)
+    wb.save(path + "\\gameData.xlsx")
