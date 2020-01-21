@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
+from openpyxl import Workbook
 
 path = os.getcwd()
 folderName = path+"\\download" #下载文件的路径
@@ -24,6 +25,7 @@ def source2Html(Source,htmlName,season):
     fp = open(htmlName, "w", encoding='utf-8')
     fp.write(Source)
     fp.close()
+
 
 #季前赛下载
 def downloadPreSeason(driver,season):
@@ -52,7 +54,7 @@ def downloadregularSeason(driver,season):
         driver.find_element_by_id("yearmonthTable2").find_elements_by_class_name("lsm2")[num].click()
         num += 1
         time.sleep(0.5)
-        htmlName = folderName+"\\"+season+"\\"+"_常规赛_"+str(num)
+        htmlName = folderName+"\\"+season+"\\"+"常规赛_"+str(num)
         source2Html(driver.page_source, htmlName,season)
 
 #季后赛下载
@@ -70,7 +72,7 @@ def downloadPlayOff(driver,season):
         except:
             print("季后赛还没开始")
             return
-        htmlName = folderName+"\\"+season+"\\"+"_季后赛_"+game
+        htmlName = folderName+"\\"+season+"\\"+"季后赛_"+game
         source2Html(driver.page_source,htmlName,season)
 
 
@@ -121,3 +123,37 @@ def analysHtml(html):
     Schedule_List = []
     for tr in trs:
         print(tr.text)
+
+def gethtmlpath():
+    sheetNames = {}
+    dirs = os.listdir(folderName)
+    for dir in dirs:
+        files = os.listdir(folderName+"\\"+dir)
+        sheetNames[dir]= files
+    return sheetNames
+
+def createxls(seasons):
+    titles = ["类型", "时间", "主队", "比分", "客队", "让分", "总分", "资料", "半场"]
+    num = 0
+    isExists = os.path.exists(path + "\\gameData.xlsx")
+    if not isExists:
+        print("文件不存在")
+        wb = Workbook()
+        for season in seasons:
+            wb.create_sheet(season)
+            sheet = wb.get_sheet_by_name(season)
+            sheet.append(titles)
+
+
+        wb.remove(wb.get_sheet_by_name("Sheet"))
+
+
+
+        wb.save(path + "\\gameData.xlsx")
+
+
+def html2excel():
+    sheetNames = gethtmlpath()
+    createxls(sheetNames)
+
+    return
